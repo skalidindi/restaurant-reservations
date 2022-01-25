@@ -4,8 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "start:resy": "NODE_OPTIONS='--experimental-specifier-resolution=node' node resy.js | pino-pretty -t",
-    "start:open-table": "NODE_OPTIONS='--experimental-specifier-resolution=node' node open-table.js | pino-pretty -t"
+    "start:resy": "NODE_OPTIONS='--experimental-specifier-resolution=node' node services/resy.js | pino-pretty -t",
+    "start:open-table": "NODE_OPTIONS='--experimental-specifier-resolution=node' node services/open-table.js | pino-pretty -t"
   },
   "author": "skalidindi8@gmail.com",
   "license": "ISC",

@@ -4,20 +4,21 @@ import {
   MIN_HOUR,
   MAX_HOUR,
   PARTY_SIZE,
+  POLL_INTERVAL,
   RANKED_PREFERRED_TIMES,
   START_DATE,
   TIME_FORMAT,
-} from './config/base';
+} from '../config/base';
 import {
   OPEN_TABLE_AUTH_TOKEN,
   OPEN_TABLE_GLOBAL_PID,
   OPEN_TABLE_RESTAURANT_ID,
   OPEN_TABLE_VENUE_NAME,
-} from './config/open-table';
-import { TWILIO_TO_NUMBER } from './config/twilio';
+} from '../config/open-table';
+import { TWILIO_TO_NUMBER } from '../config/twilio';
 import got from 'got';
 import dayjs from 'dayjs';
-import logger from './utils/logger';
+import logger from '../utils/logger';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import isBetween from 'dayjs/plugin/isBetween';
 dayjs.extend(customParseFormat);
@@ -177,5 +178,5 @@ if (!success) {
     if (success) {
       clearInterval(intervalId);
     }
-  }, 1000 * 60 * 5);
+  }, POLL_INTERVAL);
 }
