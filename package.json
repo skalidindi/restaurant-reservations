@@ -3,17 +3,15 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
+  "main": "app.js",
   "scripts": {
-    "start:resy": "NODE_OPTIONS='--experimental-specifier-resolution=node' node services/resy.js | pino-pretty -t",
-    "start:open-table": "NODE_OPTIONS='--experimental-specifier-resolution=node' node services/open-table.js | pino-pretty -t"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "skalidindi8@gmail.com",
   "license": "ISC",
   "dependencies": {
     "dayjs": "^1.10.7",
     "got": "^12.0.1",
-    "pino": "^7.6.4",
-    "pino-pretty": "^7.5.0",
     "twilio": "^3.73.0"
   }
 }

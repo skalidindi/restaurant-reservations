@@ -1,23 +1,26 @@
-import {
-  DAYS_IN_WEEK,
-  END_DATE,
-  MIN_HOUR,
-  MAX_HOUR,
-  PARTY_SIZE,
-  POLL_INTERVAL,
-  RANKED_PREFERRED_TIMES,
-  START_DATE,
-  TIME_FORMAT,
-} from '../config/base';
-import { RESY_API_KEY, RESY_AUTH_TOKEN, RESY_VENUE_ID, RESY_VENUE_NAME } from '../config/resy';
 import got from 'got';
 import dayjs from 'dayjs';
 import { sendTwilioMessage } from '../utils/twilio';
-import logger from '../utils/logger';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import isBetween from 'dayjs/plugin/isBetween';
 dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
+
+const {
+  START_DATE,
+  END_DATE,
+  DAYS_IN_WEEK,
+  MIN_HOUR,
+  MAX_HOUR,
+  PARTY_SIZE,
+  RANKED_PREFERRED_TIMES,
+  RESY_API_KEY,
+  RESY_AUTH_TOKEN,
+  RESY_VENUE_ID,
+  RESY_VENUE_NAME,
+} = process.env;
+
+const TIME_FORMAT = 'HH:mm:ss';
 
 function createResyClient() {
   const client = got.extend({
@@ -75,8 +78,9 @@ async function fetchFilteredAvailabilities() {
       const dateTime = slot.date.start;
       const dayObject = dayjs(dateTime);
       const day = dayObject.day();
+      const DAYS_IN_WEEK_ARRAY = DAYS_IN_WEEK.split(',').map((num) => parseInt(num.trim(), 10));
       return (
-        DAYS_IN_WEEK.includes(day) &&
+        DAYS_IN_WEEK_ARRAY.includes(day) &&
         dayObject.isBetween(dayObject.hour(MIN_HOUR), dayObject.hour(MAX_HOUR), 'minute', '[]')
       );
     });
@@ -122,7 +126,8 @@ async function bookReservationSlot(bookToken, paymentId) {
 }
 
 function getPreferredAvailability(availabilities) {
-  for (const rankedPreferredTime of RANKED_PREFERRED_TIMES) {
+  const RANKED_PREFERRED_TIMES_ARRAY = RANKED_PREFERRED_TIMES.split(',').map((time) => time.trim());
+  for (const rankedPreferredTime of RANKED_PREFERRED_TIMES_ARRAY) {
     const preferredAvailability = availabilities.find(({ date: { start } }) => {
       const time = dayjs(start).format(TIME_FORMAT);
       return time === rankedPreferredTime;
@@ -133,7 +138,7 @@ function getPreferredAvailability(availabilities) {
   }
 
   // If no preferred times are matched exactly, return the time closest to first preference
-  const firstPreferredTime = RANKED_PREFERRED_TIMES[0];
+  const firstPreferredTime = RANKED_PREFERRED_TIMES_ARRAY[0];
   const startTimeDifferenceBetweenFirstPreferredTime = availabilities.map(({ date: { start } }) =>
     // Format date time i.e '2022-01-28 18:00:00' into time i.e '18:00:00' and then parse as dayjs object
     Math.abs(dayjs(dayjs(start).format(TIME_FORMAT), TIME_FORMAT).diff(dayjs(firstPreferredTime, TIME_FORMAT))),
@@ -143,7 +148,7 @@ function getPreferredAvailability(availabilities) {
   return availabilities[startTimeDifferenceBetweenFirstPreferredTime.indexOf(min)];
 }
 
-async function run() {
+export default async function resy() {
   const availabilities = await fetchFilteredAvailabilities();
   if (availabilities.length > 0) {
     const {
@@ -152,27 +157,17 @@ async function run() {
     } = getPreferredAvailability(availabilities);
     const foundMessage = `We found a reservation on ${dayjs(start)}`;
     sendTwilioMessage(foundMessage);
-    logger.info(foundMessage);
+    console.log(foundMessage);
     const bookingDetails = await fetchBookingDetails(token, dayjs(start).format('YYYY-MM-DD'), PARTY_SIZE);
     const { reservation_id } = await bookReservationSlot(bookingDetails.bookToken, bookingDetails.paymentId);
     const bookedMessage = `We booked your reservation for ${RESY_VENUE_NAME} at ${dayjs(
       start,
     )} with id ${reservation_id}`;
-    logger.info(bookedMessage);
+    console.log(bookedMessage);
     sendTwilioMessage(bookedMessage);
     return true;
   } else {
-    logger.info('No availabilities found');
+    console.log('No availabilities found');
     return false;
   }
-}
-
-const success = await run();
-if (!success) {
-  const intervalId = setInterval(async () => {
-    const success = await run();
-    if (success) {
-      clearInterval(intervalId);
-    }
-  }, POLL_INTERVAL);
 }

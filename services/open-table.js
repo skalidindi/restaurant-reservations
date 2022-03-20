@@ -1,28 +1,27 @@
-import {
-  DAYS_IN_WEEK,
-  END_DATE,
-  MIN_HOUR,
-  MAX_HOUR,
-  PARTY_SIZE,
-  POLL_INTERVAL,
-  RANKED_PREFERRED_TIMES,
-  START_DATE,
-  TIME_FORMAT,
-} from '../config/base';
-import {
-  OPEN_TABLE_AUTH_TOKEN,
-  OPEN_TABLE_GLOBAL_PID,
-  OPEN_TABLE_RESTAURANT_ID,
-  OPEN_TABLE_VENUE_NAME,
-} from '../config/open-table';
-import { TWILIO_TO_NUMBER } from '../config/twilio';
 import got from 'got';
 import dayjs from 'dayjs';
-import logger from '../utils/logger';
+import { sendTwilioMessage } from '../utils/twilio';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import isBetween from 'dayjs/plugin/isBetween';
 dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
+
+const {
+  START_DATE,
+  END_DATE,
+  DAYS_IN_WEEK,
+  MIN_HOUR,
+  MAX_HOUR,
+  PARTY_SIZE,
+  RANKED_PREFERRED_TIMES,
+  OPEN_TABLE_AUTH_TOKEN,
+  OPEN_TABLE_GLOBAL_PID,
+  OPEN_TABLE_RESTAURANT_ID,
+  OPEN_TABLE_VENUE_NAME,
+  TWILIO_TO_NUMBER,
+} = process.env;
+
+const TIME_FORMAT = 'HH:mm:ss';
 
 function createOpenTableClient() {
   const client = got.extend({
@@ -62,8 +61,9 @@ async function fetchFilteredAvailabilities() {
   const filteredAvailabileDates = availableDates.filter(({ dateTime, timeslots }) => {
     const dayObject = dayjs(dateTime);
     const day = dayObject.day();
+    const DAYS_IN_WEEK_ARRAY = DAYS_IN_WEEK.split(',').map((num) => parseInt(num.trim(), 10));
     return (
-      DAYS_IN_WEEK.includes(day) &&
+      DAYS_IN_WEEK_ARRAY.includes(day) &&
       timeslots?.length > 0 &&
       dayObject.isBetween(dayjs(START_DATE), dayjs(END_DATE), 'day', '[]')
     );
@@ -78,7 +78,8 @@ async function fetchFilteredAvailabilities() {
 }
 
 function getPreferredAvailability(availabilities) {
-  for (const rankedPreferredTime of RANKED_PREFERRED_TIMES) {
+  const RANKED_PREFERRED_TIMES_ARRAY = RANKED_PREFERRED_TIMES.split(',').map((time) => time.trim());
+  for (const rankedPreferredTime of RANKED_PREFERRED_TIMES_ARRAY) {
     const preferredAvailability = availabilities.find(({ dateTime }) => {
       const time = dayjs(dateTime).format(TIME_FORMAT);
       return time === rankedPreferredTime;
@@ -89,7 +90,7 @@ function getPreferredAvailability(availabilities) {
   }
 
   // If no preferred times are matched exactly, return the time closest to first preference
-  const firstPreferredTime = RANKED_PREFERRED_TIMES[0];
+  const firstPreferredTime = RANKED_PREFERRED_TIMES_ARRAY[0];
   const startTimeDifferenceBetweenFirstPreferredTime = availabilities.map(({ dateTime }) =>
     // Format date time i.e '2022-01-28 18:00:00' into time i.e '18:00:00' and then parse as dayjs object
     Math.abs(dayjs(dayjs(dateTime).format(TIME_FORMAT), TIME_FORMAT).diff(dayjs(firstPreferredTime, TIME_FORMAT))),
@@ -149,34 +150,24 @@ async function bookReservationSlot(dateTime, slotHash, slotAvailabilityToken, lo
   return reservationDetails;
 }
 
-async function run() {
+export default async function openTable() {
   const availabilities = await fetchFilteredAvailabilities();
   if (availabilities.length > 0) {
     const { dateTime, slotHash, token } = getPreferredAvailability(availabilities);
     const foundMessage = `We found a reservation on ${dayjs(dateTime)}`;
     sendTwilioMessage(foundMessage);
-    logger.info(foundMessage);
+    console.log(foundMessage);
     const { id } = await lockBooking(dateTime, slotHash, PARTY_SIZE);
-    logger.info(`We successfully locked a reservation with lock id ${id}`);
+    console.log(`We successfully locked a reservation with lock id ${id}`);
     const { confirmationNumber } = await bookReservationSlot(dateTime, slotHash, token, id);
     const bookedMessage = `We booked your reservation for ${OPEN_TABLE_VENUE_NAME} at ${dayjs(
       dateTime,
     )} with id ${confirmationNumber}`;
-    logger.info(reservationDetails);
+    console.log(reservationDetails);
     sendTwilioMessage(bookedMessage);
     return true;
   } else {
-    logger.info('No availabilities found');
+    console.log('No availabilities found');
     return false;
   }
-}
-
-const success = await run();
-if (!success) {
-  const intervalId = setInterval(async () => {
-    const success = await run();
-    if (success) {
-      clearInterval(intervalId);
-    }
-  }, POLL_INTERVAL);
 }
