@@ -1,11 +1,11 @@
 FROM public.ecr.aws/lambda/nodejs:14
-# Alternatively, you can pull the base image from Docker Hub: amazon/aws-lambda-nodejs:12
 
 # Assumes your function is named "app.js", and there is a package.json file in the app directory 
 COPY app.js ${LAMBDA_TASK_ROOT}
 COPY package.json ${LAMBDA_TASK_ROOT}
-COPY utils ${LAMBDA_TASK_ROOT}
-COPY services ${LAMBDA_TASK_ROOT}
+COPY utils/twilio.js ${LAMBDA_TASK_ROOT}/utils/twilio.js
+COPY services/open-table.js ${LAMBDA_TASK_ROOT}/services/open-table.js
+COPY services/resy.js ${LAMBDA_TASK_ROOT}/services/resy.js
 
 # Install NPM dependencies for function
 RUN corepack enable

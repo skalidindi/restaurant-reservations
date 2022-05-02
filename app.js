@@ -1,5 +1,5 @@
-import resyHandler from './services/resy';
-import openTableHandler from './services/open-table';
+import resyHandler from './services/resy.js';
+import openTableHandler from './services/open-table.js';
 
 const { RESTAURANT_TYPE } = process.env;
 

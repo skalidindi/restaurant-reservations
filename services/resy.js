@@ -1,8 +1,8 @@
 import got from 'got';
 import dayjs from 'dayjs';
-import { sendTwilioMessage } from '../utils/twilio';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
-import isBetween from 'dayjs/plugin/isBetween';
+import { sendTwilioMessage } from '../utils/twilio.js';
+import customParseFormat from 'dayjs/plugin/customParseFormat.js';
+import isBetween from 'dayjs/plugin/isBetween.js';
 dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
 
